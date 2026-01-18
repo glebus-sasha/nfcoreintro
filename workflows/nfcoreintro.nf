@@ -4,6 +4,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 include { FASTQC                 } from '../modules/nf-core/fastqc/main'
+include { FASTP                  } from '../modules/nf-core/fastp/main'                                                    
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -32,7 +33,20 @@ workflow NFCOREINTRO {
     )
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
     ch_versions = ch_versions.mix(FASTQC.out.versions.first())
-
+    //
+    // MODULE: Run FastP
+    //
+    ch_samplesheet = ch_samplesheet.map { meta, reads -> [ meta, reads, [] ] }
+    FASTP (
+        ch_samplesheet,
+        false,
+        false,
+        false
+    )
+    ch_samplesheet.view()
+    ch_trimmed_reads = FASTP.out.reads
+    ch_multiqc_files = ch_multiqc_files.mix(FASTP.out.json.collect{it[1]})
+    ch_versions = ch_versions.mix(FASTP.out.versions.first())
     //
     // Collate and save software versions
     //
