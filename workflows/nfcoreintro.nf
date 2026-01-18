@@ -3,8 +3,11 @@
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-include { FASTQC                 } from '../modules/nf-core/fastqc/main'
-include { FASTP                  } from '../modules/nf-core/fastp/main'                                                    
+include { FASTP                  } from '../modules/nf-core/fastp/main'       
+include { BWA_MEM                } from '../modules/nf-core/bwa/mem/main'  
+include { SAMTOOLS_INDEX         } from '../modules/nf-core/samtools/index/main'  
+include { SAMTOOLS_FLAGSTAT      } from '../modules/nf-core/samtools/flagstat/main' 
+include { BCFTOOLS_MPILEUP       } from '../modules/nf-core/bcftools/mpileup/main'                                                                                                                                                                                    
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -21,18 +24,13 @@ workflow NFCOREINTRO {
 
     take:
     ch_samplesheet // channel: samplesheet read in from --input
+    fasta
+    bwa_index
+
     main:
 
     ch_versions = channel.empty()
     ch_multiqc_files = channel.empty()
-    //
-    // MODULE: Run FastQC
-    //
-    FASTQC (
-        ch_samplesheet
-    )
-    ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
-    ch_versions = ch_versions.mix(FASTQC.out.versions.first())
     //
     // MODULE: Run FastP
     //
@@ -43,14 +41,51 @@ workflow NFCOREINTRO {
         false,
         false
     )
-    ch_samplesheet.view()
     ch_trimmed_reads = FASTP.out.reads
     ch_multiqc_files = ch_multiqc_files.mix(FASTP.out.json.collect{it[1]})
     ch_versions = ch_versions.mix(FASTP.out.versions.first())
     //
+    // MODULE: Run bwa mem
+    //
+    BWA_MEM (
+        ch_trimmed_reads,
+        bwa_index,
+        fasta,
+        true
+    )
+    ch_versions = ch_versions.mix(BWA_MEM.out.versions.first())
+    ch_bam = BWA_MEM.out.bam
+    //
+    // MODULE: Run samtools index
+    //
+    SAMTOOLS_INDEX (
+        ch_bam
+    )
+    ch_versions         = ch_versions.mix(SAMTOOLS_INDEX.out.versions.first())
+    ch_bai              = SAMTOOLS_INDEX.out.bai
+    //
+    // MODULE: Run samtools flagstat
+    //
+    ch_aligment = ch_bam.join(ch_bai)
+    SAMTOOLS_FLAGSTAT (
+        ch_aligment
+    )
+    ch_versions = ch_versions.mix(SAMTOOLS_FLAGSTAT.out.versions.first())
+    ch_multiqc_files    = ch_multiqc_files.mix(SAMTOOLS_FLAGSTAT.out.flagstat.collect{it[1]})
+    //
+    // MODULE: Run bcftools mpileup
+    //
+    ch_varcall_input = ch_bam.map { meta, bam -> [ meta, bam, [] ] }
+    BCFTOOLS_MPILEUP (
+        ch_varcall_input,
+        fasta,
+        false
+    )
+    ch_multiqc_files    = ch_multiqc_files.mix(BCFTOOLS_MPILEUP.out.stats.collect{ it -> it[1]})
+    //
     // Collate and save software versions
     //
-    def topic_versions = Channel.topic("versions")
+    def topic_versions = channel.topic("versions")
         .distinct()
         .branch { entry ->
             versions_file: entry instanceof Path

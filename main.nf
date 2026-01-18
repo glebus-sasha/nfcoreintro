@@ -27,7 +27,8 @@ include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_nfco
 // TODO nf-core: Remove this line if you don't need a FASTA file
 //   This is an example of how to use getGenomeAttribute() to fetch parameters
 //   from igenomes.config using `--genome`
-params.fasta = getGenomeAttribute('fasta')
+params.fasta        = getGenomeAttribute('fasta')
+params.bwa_index    = getGenomeAttribute('bwa')
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,6 +43,8 @@ workflow GLEBUSSASHA_NFCOREINTRO {
 
     take:
     samplesheet // channel: samplesheet read in from --input
+    fasta
+    bwa_index
 
     main:
 
@@ -49,7 +52,9 @@ workflow GLEBUSSASHA_NFCOREINTRO {
     // WORKFLOW: Run pipeline
     //
     NFCOREINTRO (
-        samplesheet
+        samplesheet,
+        fasta,
+        bwa_index
     )
     emit:
     multiqc_report = NFCOREINTRO.out.multiqc_report // channel: /path/to/multiqc_report.html
@@ -75,14 +80,18 @@ workflow {
         params.input,
         params.help,
         params.help_full,
-        params.show_hidden
+        params.show_hidden,
+        params.fasta,
+        params.bwa_index
     )
 
     //
     // WORKFLOW: Run main workflow
     //
     GLEBUSSASHA_NFCOREINTRO (
-        PIPELINE_INITIALISATION.out.samplesheet
+        PIPELINE_INITIALISATION.out.samplesheet,
+        PIPELINE_INITIALISATION.out.fasta,
+        PIPELINE_INITIALISATION.out.bwa_index
     )
     //
     // SUBWORKFLOW: Run completion tasks

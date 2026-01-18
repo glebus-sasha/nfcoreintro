@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://raw.githubusercontent.com/glebus-sasha/nfcoreintro/master/nextflow_schema.json",
     "title": "glebus-sasha/nfcoreintro pipeline parameters",
-    "description": "An nf-core–style training pipeline",
+    "description": "An nf-core\u2013style training pipeline",
     "type": "object",
     "$defs": {
         "input_output_options": {
@@ -64,6 +64,9 @@
                     "description": "Path to FASTA genome file.",
                     "help_text": "This parameter is *mandatory* if `--genome` is not specified. If you don't have a BWA index available this will be generated for you automatically. Combine with `--save_reference` to save BWA index for future runs.",
                     "fa_icon": "far fa-file-code"
+                },
+                "bwa_index": {
+                    "type": "string"
                 },
                 "igenomes_ignore": {
                     "type": "boolean",
