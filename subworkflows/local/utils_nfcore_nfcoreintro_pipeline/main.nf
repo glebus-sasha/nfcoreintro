@@ -36,6 +36,8 @@ workflow PIPELINE_INITIALISATION {
     help              // boolean: Display help message and exit
     help_full         // boolean: Show the full help message
     show_hidden       // boolean: Show hidden parameters in the help message
+    fasta
+    bwa_index
 
     main:
 
@@ -103,10 +105,15 @@ workflow PIPELINE_INITIALISATION {
                 return [ meta, fastqs.flatten() ]
         }
         .set { ch_samplesheet }
+    
+    ch_fasta        = channel.value(file(fasta)).map { file -> [ [], file ] }
+    ch_bwa_index    = channel.value(file(bwa_index)).map { file -> [ [], file ] }
 
     emit:
     samplesheet = ch_samplesheet
     versions    = ch_versions
+    fasta       = ch_fasta
+    bwa_index   = ch_bwa_index
 }
 
 /*
