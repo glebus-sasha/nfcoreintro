@@ -245,5 +245,10 @@
         {
             "$ref": "#/$defs/generic_options"
         }
-    ]
+    ],
+    "properties": {
+        "bwa_index": {
+            "type": "string"
+        }
+    }
 }
